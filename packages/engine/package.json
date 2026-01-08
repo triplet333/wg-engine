@@ -1,0 +1,34 @@
+{
+    "name": "@my-engine/core",
+    "version": "0.0.1",
+    "type": "module",
+    "main": "./dist/index.js",
+    "module": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "exports": {
+        ".": {
+            "types": "./dist/src/index.d.ts",
+            "import": "./dist/index.js",
+            "require": "./dist/index.cjs"
+        },
+        "./webgpu": {
+            "types": "./dist/src/webgpu.d.ts",
+            "import": "./dist/webgpu.js",
+            "require": "./dist/webgpu.cjs"
+        },
+        "./input": {
+            "types": "./dist/src/input.d.ts",
+            "import": "./dist/input.js",
+            "require": "./dist/input.cjs"
+        }
+    },
+    "scripts": {
+        "build": "tsup && tsc --emitDeclarationOnly",
+        "dev": "tsup --watch"
+    },
+    "devDependencies": {
+        "@webgpu/types": "^0.1.68",
+        "tsup": "^8.0.0",
+        "typescript": "^5.0.0"
+    }
+}
