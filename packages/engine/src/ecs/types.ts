@@ -10,4 +10,5 @@ export interface IWorld {
     removeComponent<T extends Component>(entity: Entity, ctor: ComponentConstructor<T>): void;
     addSystem(system: System): void;
     query(componentType: ComponentConstructor): Entity[];
+    clear(): void;
 }

@@ -9,6 +9,10 @@ export class ResourceManager {
         this.renderer = renderer;
     }
 
+    public getRenderer(): WebGPURenderer {
+        return this.renderer;
+    }
+
     public async loadTexture(url: string): Promise<GPUTexture> {
         // Return existing texture if loaded
         if (this.textures.has(url)) {
@@ -45,7 +49,7 @@ export class ResourceManager {
         return this.textures.has(url);
     }
 
-    public updateTextTexture(key: string, text: { content: string, fontFamily: string, fontSize: number, color: string }): GPUTexture {
+    public updateTextTexture(key: string, text: { content: string, fontFamily: string, fontSize: number, color: string, width?: number, height?: number }): GPUTexture {
         // Create an offscreen canvas for text
         // (In a real engine, we might reuse a single canvas to avoid allocations)
         const canvas = document.createElement('canvas');
@@ -62,6 +66,10 @@ export class ResourceManager {
         const height = Math.ceil(text.fontSize * 1.2); // Rough estimation
         canvas.width = Math.max(1, width);
         canvas.height = Math.max(1, height);
+
+        // Store dimensions back to text component if possible
+        if (typeof text.width === 'number') text.width = canvas.width;
+        if (typeof text.height === 'number') text.height = canvas.height;
 
         // Draw text
         ctx.font = `${weight} ${text.fontSize}px ${text.fontFamily}`;

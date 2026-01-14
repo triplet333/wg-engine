@@ -14,4 +14,9 @@ export class EntityManager {
     public destroy(entity: Entity): void {
         this.availableIds.push(entity);
     }
+
+    public clear(): void {
+        this.nextId = 0;
+        this.availableIds = [];
+    }
 }

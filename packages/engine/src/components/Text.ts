@@ -7,6 +7,8 @@ export class Text extends Component {
     public color: string;
     public isDirty: boolean = true;
     public _textureId: string | null = null; // Internal cache ID
+    public width: number = 0;
+    public height: number = 0;
 
     constructor(content: string = '', style: { fontFamily?: string, fontSize?: number, color?: string } = {}) {
         super();

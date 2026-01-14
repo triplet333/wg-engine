@@ -22,6 +22,12 @@ export class World implements IWorld {
         }
     }
 
+    public clear(): void {
+        this.entityManager.clear();
+        this.components.clear();
+        this.systems = []; // Clear systems to allow Scenes to define their own pipelines
+    }
+
     public addComponent<T extends Component>(entity: Entity, component: T): T {
         const ctor = component.constructor as ComponentConstructor<T>;
         if (!this.components.has(ctor)) {

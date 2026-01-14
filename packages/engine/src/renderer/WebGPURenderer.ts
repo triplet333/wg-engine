@@ -12,11 +12,14 @@ export interface WebGPURendererOptions {
     pixelArt?: boolean;
 }
 
+import { ResourceManager } from '../core/ResourceManager';
+
 export class WebGPURenderer {
     public canvas: HTMLCanvasElement | OffscreenCanvas;
     public device: GPUDevice | null = null;
     public context: GPUCanvasContext | null = null;
     public format: GPUTextureFormat = 'bgra8unorm';
+    public resourceManager!: ResourceManager; // Initialized in init
 
     public virtualWidth: number = 0;
     public virtualHeight: number = 0;
@@ -32,6 +35,8 @@ export class WebGPURenderer {
         this.virtualHeight = options.virtualHeight || this.canvas.height;
         this.resolutionMode = options.resolutionMode || 'none';
         this.pixelArt = options.pixelArt || false;
+
+        // resourceManager will be created after device is ready
     }
 
     public async init(): Promise<void> {
@@ -49,6 +54,9 @@ export class WebGPURenderer {
             console.error(`WebGPU Device was lost: ${info.reason}, ${info.message}`);
         });
         this.device = device;
+
+        // Initialize ResourceManager
+        this.resourceManager = new ResourceManager(this);
 
         const context = this.canvas.getContext('webgpu');
         if (!context) {

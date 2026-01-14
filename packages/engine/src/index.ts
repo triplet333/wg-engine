@@ -5,7 +5,15 @@ export * from './components/Transform';
 export * from './components/Camera';
 export * from './components/Text';
 export * from './components/BoxCollider';
+export * from './components/SpriteSheet';
+export * from './components/Animation';
 export * from './systems/PhysicsSystem';
+export * from './systems/AnimationSystem';
+// Core
+export * from './core/Scene';
+export * from './core/SceneManager';
+export * from './core/ResourceManager';
+export * from './core/AnimationTypes';
 // Other components like Sprite/Renderable moved to specific exports or separate
 
 export class Game {

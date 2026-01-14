@@ -23,10 +23,10 @@ export class WebGPURenderSystem extends System {
     private viewBindGroupLayout: GPUBindGroupLayout | null = null;
     private materialBindGroupLayout: GPUBindGroupLayout | null = null;
 
-    // Per Instance: Pos(2) + Color(4) = 6 floats = 24 bytes
-    private instanceStride = 6 * 4;
+    // Per Instance: Pos(2) + Color(4) + UVOffset(2) + UVScale(2) + Scale(2) = 12 floats = 48 bytes
+    private instanceStride = 12 * 4;
     private maxInstances = 10000;
-    private instanceData = new Float32Array(this.maxInstances * 6);
+    private instanceData = new Float32Array(this.maxInstances * 12);
 
     private isReady: boolean = false;
     private world!: IWorld;
@@ -149,12 +149,27 @@ export class WebGPURenderSystem extends System {
                             {
                                 shaderLocation: 1,
                                 offset: 0,
-                                format: 'float32x2',
+                                format: 'float32x2', // Position
                             },
                             {
                                 shaderLocation: 2,
                                 offset: 2 * 4,
-                                format: 'float32x4',
+                                format: 'float32x4', // Color
+                            },
+                            {
+                                shaderLocation: 3,
+                                offset: 6 * 4,
+                                format: 'float32x2', // UV Offset
+                            },
+                            {
+                                shaderLocation: 4,
+                                offset: 8 * 4,
+                                format: 'float32x2', // UV Scale
+                            },
+                            {
+                                shaderLocation: 5,
+                                offset: 10 * 4,
+                                format: 'float32x2', // Scale
                             }
                         ],
                     }
@@ -309,7 +324,7 @@ export class WebGPURenderSystem extends System {
             // Use Renderable for tint if present, else White
             const renderable = this.world.getComponent(item.entity, Renderable);
 
-            const offset = instanceCount * 6;
+            const offset = instanceCount * 12;
             // Position
             this.instanceData[offset] = transform.x;
             this.instanceData[offset + 1] = transform.y;
@@ -327,6 +342,47 @@ export class WebGPURenderSystem extends System {
                 this.instanceData[offset + 5] = 1.0;
             }
 
+            // UVs
+            const sprite = this.world.getComponent(item.entity, Sprite);
+            const text = this.world.getComponent(item.entity, Text);
+
+            if (sprite) {
+                this.instanceData[offset + 6] = sprite.uvOffset[0];
+                this.instanceData[offset + 7] = sprite.uvOffset[1];
+                this.instanceData[offset + 8] = sprite.uvScale[0];
+                this.instanceData[offset + 9] = sprite.uvScale[1];
+
+                // Scale (from Transform)
+                this.instanceData[offset + 10] = transform.scale[0];
+                this.instanceData[offset + 11] = transform.scale[1];
+            } else if (text) {
+                // Text Rendering
+                this.instanceData[offset + 6] = 0.0;
+                this.instanceData[offset + 7] = 0.0;
+                this.instanceData[offset + 8] = 1.0;
+                this.instanceData[offset + 9] = 1.0;
+
+                // Scale (Auto calc from Text dimensions)
+                // Base Quad is 50x50.
+                // We want final size to be Text.width x Text.height.
+                // Scale = Target / 50.
+                if (text.width > 0 && text.height > 0) {
+                    this.instanceData[offset + 10] = text.width / 50.0;
+                    this.instanceData[offset + 11] = text.height / 50.0;
+                } else {
+                    this.instanceData[offset + 10] = 1.0;
+                    this.instanceData[offset + 11] = 1.0;
+                }
+            } else {
+                // Default
+                this.instanceData[offset + 6] = 0.0;
+                this.instanceData[offset + 7] = 0.0;
+                this.instanceData[offset + 8] = 1.0;
+                this.instanceData[offset + 9] = 1.0;
+                this.instanceData[offset + 10] = 1.0;
+                this.instanceData[offset + 11] = 1.0;
+            }
+
             instanceCount++;
             currentBatch!.count++;
         }
@@ -340,7 +396,7 @@ export class WebGPURenderSystem extends System {
             0,
             this.instanceData,
             0,
-            instanceCount * 6
+            instanceCount * 12
         );
 
         // 4. Render Pass
