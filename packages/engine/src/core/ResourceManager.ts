@@ -67,6 +67,9 @@ export class ResourceManager {
         const promise = (async () => {
             try {
                 const response = await fetch(url);
+                if (!response.ok) {
+                    throw new Error(`Failed to load audio: ${url} (Status: ${response.status})`);
+                }
                 const arrayBuffer = await response.arrayBuffer();
                 const audioBuffer = await context.decodeAudioData(arrayBuffer);
                 const asset = { buffer: audioBuffer, defaultGroup: group };

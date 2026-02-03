@@ -34,7 +34,7 @@ export class WebGPURenderSystem extends System {
     constructor(renderer: WebGPURenderer) {
         super();
         this.renderer = renderer;
-        this.resourceManager = new ResourceManager(renderer);
+        this.resourceManager = renderer.resourceManager;
         this.priority = 1000;
     }
 

@@ -85,10 +85,23 @@ export class WebGPURenderer {
             throw new Error('WebGPURenderer not initialized (device is null)');
         }
         const response = await fetch(url);
-        const blob = await response.blob();
-        const imgBitmap = await createImageBitmap(blob);
+        if (!response.ok) {
+            throw new Error(`Failed to load texture: ${url} (Status: ${response.status})`);
+        }
 
-        return this.createTextureFromSource(imgBitmap);
+        const contentType = response.headers.get('Content-Type');
+        if (contentType && !contentType.startsWith('image/')) {
+            const text = await response.text();
+            throw new Error(`Failed to load texture: ${url} (Invalid Content-Type: ${contentType}). Peek: ${text.substring(0, 100)}`);
+        }
+
+        const blob = await response.blob();
+        try {
+            const imgBitmap = await createImageBitmap(blob);
+            return this.createTextureFromSource(imgBitmap);
+        } catch (e) {
+            throw new Error(`Failed to decode image: ${url} (Size: ${blob.size}, Type: ${blob.type}). Original Error: ${e}`);
+        }
     }
 
     public createTextureFromSource(source: ImageBitmap | HTMLCanvasElement): GPUTexture {
