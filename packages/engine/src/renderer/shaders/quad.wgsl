@@ -47,7 +47,8 @@ fn vs_main(input: VertexInput) -> VertexOutput {
     output.color = input.color;
     
     // UV Calculation: (Base [0..1] * Scale) + Offset
-    let baseUV = input.position / 50.0;
+    // Input position is now 0..1 (Unit Quad)
+    let baseUV = input.position;
     output.uv = (baseUV * input.uvScale) + input.uvOffset;
 
     return output;

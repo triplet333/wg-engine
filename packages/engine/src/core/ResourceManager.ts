@@ -1,4 +1,8 @@
 import { WebGPURenderer } from '../renderer/WebGPURenderer';
+import { AudioGroup } from './AudioManager';
+
+export type AudioManifest = Record<string, { path: string, group: AudioGroup }>;
+export type ImageManifest = Record<string, { path: string }>;
 
 export class ResourceManager {
     private textures: Map<string, GPUTexture> = new Map();
@@ -39,6 +43,55 @@ export class ResourceManager {
 
         this.loadingPromises.set(url, promise);
         return promise;
+    }
+
+    public async loadTextureManifest(manifest: ImageManifest): Promise<void> {
+        const promises = Object.entries(manifest).map(async ([key, config]) => {
+            const texture = await this.loadTexture(config.path);
+            // Register alias for Key access
+            this.textures.set(key, texture);
+        });
+        await Promise.all(promises);
+    }
+
+
+
+    // --- AUDIO ---
+    public readonly audioAssets: Map<string, { buffer: AudioBuffer, defaultGroup: AudioGroup }> = new Map();
+    private audioLoadingPromises: Map<string, Promise<{ buffer: AudioBuffer, defaultGroup: AudioGroup }>> = new Map();
+
+    public async loadAudio(key: string, url: string, group: AudioGroup, context: AudioContext): Promise<{ buffer: AudioBuffer, defaultGroup: AudioGroup }> {
+        if (this.audioAssets.has(key)) return this.audioAssets.get(key)!;
+        if (this.audioLoadingPromises.has(key)) return this.audioLoadingPromises.get(key)!;
+
+        const promise = (async () => {
+            try {
+                const response = await fetch(url);
+                const arrayBuffer = await response.arrayBuffer();
+                const audioBuffer = await context.decodeAudioData(arrayBuffer);
+                const asset = { buffer: audioBuffer, defaultGroup: group };
+                this.audioAssets.set(key, asset);
+                this.audioLoadingPromises.delete(key);
+                return asset;
+            } catch (err) {
+                this.audioLoadingPromises.delete(key);
+                throw err;
+            }
+        })();
+
+        this.audioLoadingPromises.set(key, promise);
+        return promise;
+    }
+
+    public async loadAudioManifest(manifest: AudioManifest, context: AudioContext): Promise<void> {
+        const promises = Object.entries(manifest).map(([key, config]) =>
+            this.loadAudio(key, config.path, config.group, context)
+        );
+        await Promise.all(promises);
+    }
+
+    public getAudio(key: string): { buffer: AudioBuffer, defaultGroup: AudioGroup } | undefined {
+        return this.audioAssets.get(key);
     }
 
     public getTexture(url: string): GPUTexture | undefined {

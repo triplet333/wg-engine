@@ -9,6 +9,12 @@ export * from './components/SpriteSheet';
 export * from './components/Animation';
 export * from './systems/PhysicsSystem';
 export * from './systems/AnimationSystem';
+export * from './systems/UISystem';
+export * from './systems/AudioSystem';
+export * from './components/AudioSource';
+export * from './core/AudioManager';
+export * from './components/Layer';
+export * from './components/Button';
 // Core
 export * from './core/Scene';
 export * from './core/SceneManager';
