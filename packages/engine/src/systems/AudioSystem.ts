@@ -2,7 +2,7 @@ import { System } from '../ecs/System';
 import { IWorld } from '../ecs/types';
 import { AudioSource } from '../components/AudioSource';
 import { AudioManager, SystemAudioGroups } from '../core/AudioManager';
-import { ResourceManager } from '../core/ResourceManager';
+import { AudioStore } from '../core/stores/AudioStore';
 
 interface AudioNodeData {
     sourceNode: AudioBufferSourceNode | null;
@@ -13,15 +13,15 @@ interface AudioNodeData {
 export class AudioSystem extends System {
     private world!: IWorld;
     private audioManager: AudioManager;
-    private resourceManager: ResourceManager;
+    private audioStore: AudioStore;
 
     // Map Entity ID to active audio nodes
     private activeSources: Map<number, AudioNodeData> = new Map();
 
-    constructor(audioManager: AudioManager, resourceManager: ResourceManager) {
+    constructor(audioManager: AudioManager, audioStore: AudioStore) {
         super();
         this.audioManager = audioManager;
-        this.resourceManager = resourceManager;
+        this.audioStore = audioStore;
 
         // Attempt unlock on init (though usually needs event)
         // Ideally Game loop handles interaction event to call audioManager.resume()
@@ -86,7 +86,7 @@ export class AudioSystem extends System {
         // Resolve Asset (Buffer + Group)
         if (typeof component.clip === 'string') {
             const key = component.clip;
-            const asset = this.resourceManager.getAudio(key);
+            const asset = this.audioStore.get(key);
 
             if (asset) {
                 buffer = asset.buffer;
@@ -103,7 +103,7 @@ export class AudioSystem extends System {
                 }
             } else {
                 // Not loaded or loading
-                if (!this.resourceManager.isLoading(key)) {
+                if (!this.audioStore.isLoading(key)) {
                     // We can't auto-load easily without URL. 
                     // Key-based system assumes preload.
                     console.warn(`Audio key not found: ${key}`);

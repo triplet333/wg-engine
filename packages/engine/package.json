@@ -20,6 +20,26 @@
             "types": "./dist/src/input.d.ts",
             "import": "./dist/input.js",
             "require": "./dist/input.cjs"
+        },
+        "./physics": {
+            "types": "./dist/src/physics.d.ts",
+            "import": "./dist/physics.js",
+            "require": "./dist/physics.cjs"
+        },
+        "./ui": {
+            "types": "./dist/src/ui.d.ts",
+            "import": "./dist/ui.js",
+            "require": "./dist/ui.cjs"
+        },
+        "./audio": {
+            "types": "./dist/src/audio.d.ts",
+            "import": "./dist/audio.js",
+            "require": "./dist/audio.cjs"
+        },
+        "./animation": {
+            "types": "./dist/src/animation.d.ts",
+            "import": "./dist/animation.js",
+            "require": "./dist/animation.cjs"
         }
     },
     "scripts": {

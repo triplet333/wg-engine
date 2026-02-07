@@ -4,7 +4,7 @@ import { WebGPURenderer } from './WebGPURenderer';
 import { Transform } from '../components/Transform';
 import { Renderable } from '../components/Renderable';
 import { Sprite } from '../components/Sprite';
-import { ResourceManager } from '../core/ResourceManager';
+import { TextureStore } from '../core/stores/TextureStore';
 import { Camera } from '../components/Camera';
 import { Text } from '../components/Text';
 import { Layer } from '../components/Layer';
@@ -13,7 +13,7 @@ import quadShader from './shaders/quad.wgsl';
 
 export class WebGPURenderSystem extends System {
     private renderer: WebGPURenderer;
-    private resourceManager: ResourceManager;
+    private textureStore: TextureStore;
 
     private pipeline: GPURenderPipeline | null = null;
     private vertexBuffer: GPUBuffer | null = null;
@@ -31,10 +31,10 @@ export class WebGPURenderSystem extends System {
     private isReady: boolean = false;
     private world!: IWorld;
 
-    constructor(renderer: WebGPURenderer) {
+    constructor(renderer: WebGPURenderer, textureStore: TextureStore) {
         super();
         this.renderer = renderer;
-        this.resourceManager = renderer.resourceManager;
+        this.textureStore = textureStore;
         this.priority = 1000;
     }
 
@@ -460,7 +460,7 @@ export class WebGPURenderSystem extends System {
                 } else if (text) {
                     if (text.isDirty || !text._textureId) {
                         text._textureId = `text_${ent}`;
-                        this.resourceManager.updateTextTexture(text._textureId, text);
+                        this.textureStore.updateTextTexture(text._textureId, text);
                         text.isDirty = false;
                     }
                     if (text._textureId) renderList.push({ entity: ent, textureId: text._textureId });
@@ -513,10 +513,12 @@ export class WebGPURenderSystem extends System {
             for (const item of renderList) {
                 if (instanceCount >= this.maxInstances) break;
                 // Texture load check...
-                if (item.textureId && !this.resourceManager.hasTexture(item.textureId) && !this.resourceManager.isLoading(item.textureId)) {
-                    this.resourceManager.loadTexture(item.textureId).catch(console.error);
+                if (item.textureId && !this.textureStore.has(item.textureId) && !this.textureStore.isLoading(item.textureId)) {
+                    this.textureStore.load(item.textureId, item.textureId).catch(console.error); // Note: Assuming textureId is URL if not in manifest? Or logic changed? 
+                    // Wait, original logic called loadTexture(item.textureId). 
+                    // TextureStore.load(key, url). If key==url, it works just like before.
                 }
-                const texture = item.textureId ? this.resourceManager.getTexture(item.textureId) : null;
+                const texture = item.textureId ? this.textureStore.get(item.textureId) : null;
                 if (item.textureId && !texture) continue;
 
                 // Update Batch
@@ -548,7 +550,7 @@ export class WebGPURenderSystem extends System {
 
                 const sprite = this.world.getComponent(item.entity, Sprite);
                 const text = this.world.getComponent(item.entity, Text);
-                const tex = item.textureId ? this.resourceManager.getTexture(item.textureId) : null;
+                const tex = item.textureId ? this.textureStore.get(item.textureId) : null;
 
                 // ... (Sprite/Text/Default logic) ...
                 if (sprite) {
@@ -605,7 +607,7 @@ export class WebGPURenderSystem extends System {
             const filterMode: GPUFilterMode = this.renderer.pixelArt ? 'nearest' : 'linear';
 
             for (const batch of batches) {
-                const texture = batch.textureId ? this.resourceManager.getTexture(batch.textureId) : null;
+                const texture = batch.textureId ? this.textureStore.get(batch.textureId) : null;
                 // Treat no texture as white rect?
                 // The current shader requires a texture bound at group 1 binding 2.
                 // We must bind SOMETHING.
