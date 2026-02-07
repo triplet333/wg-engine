@@ -7,6 +7,9 @@ export * from './components/Camera';
 export * from './core/Scene';
 export * from './core/SceneManager';
 export * from './core/ResourceManager';
+// SceneLoader and ComponentRegistry moved to framework
+// export * from './core/SceneLoader';
+// export * from './core/ComponentRegistry';
 // Other components like Sprite/Renderable moved to specific exports or separate
 
 export class Game {

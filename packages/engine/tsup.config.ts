@@ -8,7 +8,8 @@ export default defineConfig({
         'src/physics.ts',
         'src/ui.ts',
         'src/audio.ts',
-        'src/animation.ts'
+        'src/animation.ts',
+        'src/framework.ts'
     ],
     format: ['cjs', 'esm'],
     loader: {

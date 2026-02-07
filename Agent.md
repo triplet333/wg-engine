@@ -3,7 +3,8 @@
 ## 🚀 プロジェクト概要
 **Browser Game Engine** は、ECS (Entity Component System) アーキテクチャを採用した、WebGPUベースのカスタム2Dゲームエンジンです。
 - **モノレポ構成**: npm workspaces で管理されています。
-  - `packages/engine`: ゲームエンジンのコア部分。
+  - `packages/engine`: ゲームエンジンのコア機能。
+  - `packages/framework`: ゲームエンジンのデータ駆動フレームワーク。
   - `apps/private-game`: エンジンを使用した非公開のゲーム。
   - `@my-engine/core`は、`/webgpu`や`/input`といったサブパスでのエクスポートをサポートしているため、インポートパスに注意すること。
 

@@ -40,6 +40,11 @@
             "types": "./dist/src/animation.d.ts",
             "import": "./dist/animation.js",
             "require": "./dist/animation.cjs"
+        },
+        "./framework": {
+            "types": "./dist/src/framework.d.ts",
+            "import": "./dist/framework.js",
+            "require": "./dist/framework.cjs"
         }
     },
     "scripts": {

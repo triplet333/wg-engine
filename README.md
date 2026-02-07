@@ -18,6 +18,13 @@ This project is a TypeScript-based browser game engine inspired by simple 2D gam
 - `packages/engine` (`@my-engine/core`): The core game engine library (OSS).
 - `apps/private-game`: A private game implementation using the engine (Example).
 
+## Documentation
+
+- [**Architecture**](docs/ARCHITECTURE.md): Overview of ECS, Rendering, and Game Loop.
+- [**Getting Started**](docs/GETTING_STARTED.md): Step-by-step guide to create your first game.
+- [**API Reference**](docs/API_REFERENCE.md): Key classes and interfaces.
+- [**Contributing**](CONTRIBUTING.md): Guidelines for contributors.
+
 ## Getting Started
 
 1. **Install Dependencies**
