@@ -32,7 +32,7 @@ export class SceneLoader {
         this.resourceManager = resourceManager;
     }
 
-    public async loadScene(data: SceneData): Promise<void> {
+    public async loadScene(data: SceneData): Promise<Map<string, number>> {
         // 1. Load Assets
         if (data.assets) {
             // Map string group to enum if necessary, or ensure store accepts string
@@ -45,9 +45,14 @@ export class SceneLoader {
 
         // 2. Create Entities
         const registry = ComponentRegistry.getInstance();
+        const entityMap = new Map<string, number>();
 
         for (const entityData of data.entities) {
             const entity = this.world.createEntity();
+
+            if (entityData.id) {
+                entityMap.set(entityData.id, entity);
+            }
 
             // TODO: Handle entity ID if World supports tagged entities or lookups
             // The current simple ECS might not have ID lookup map exposed.
@@ -77,5 +82,7 @@ export class SceneLoader {
                 }
             }
         }
+
+        return entityMap;
     }
 }

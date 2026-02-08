@@ -172,13 +172,18 @@ export class UISystem extends System {
 
         // Navigation Logic
         if (this.focusedEntity) {
-            const currentBtn = this.world.getComponent(this.focusedEntity, Button)!;
+            const currentBtn = this.world.getComponent(this.focusedEntity, Button);
 
-            if (justPressed('ArrowUp', isUp) && currentBtn.up !== null) {
-                this.focusedEntity = currentBtn.up as unknown as Entity;
-            }
-            if (justPressed('ArrowDown', isDown) && currentBtn.down !== null) {
-                this.focusedEntity = currentBtn.down as unknown as Entity;
+            if (currentBtn) {
+                if (justPressed('ArrowUp', isUp) && currentBtn.up !== null) {
+                    this.focusedEntity = currentBtn.up as unknown as Entity;
+                }
+                if (justPressed('ArrowDown', isDown) && currentBtn.down !== null) {
+                    this.focusedEntity = currentBtn.down as unknown as Entity;
+                }
+            } else {
+                // If focused entity lost its button component or is invalid, clear focus
+                this.focusedEntity = null;
             }
         }
 
@@ -186,6 +191,10 @@ export class UISystem extends System {
         const buttons = allButtons; // Reuse query result
         for (const entity of buttons) {
             const button = this.world.getComponent(entity, Button)!;
+            if (!button) {
+                console.warn(`UISystem: Button component missing for entity ${entity} despite being in query!`);
+                continue;
+            }
 
             // Logic:
             // If Disabled, skip interact.
