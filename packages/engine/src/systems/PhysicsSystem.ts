@@ -14,23 +14,6 @@ export class PhysicsSystem extends System {
     }
 
     public update(_dt: number): void {
-        // const entities = this.world.query(Transform);
-        // Naive O(N^2) check. For 5000 entities this is deadly. 
-        // NOTE: In the stress test, we have 5000 moving entities. 
-        // Collision checking ONLY entities with BoxCollider.
-        // We should ensure we don't iterate 5000 random walkers if they don't have colliders.
-
-        // Optimized query: Query BoxCollider first. 
-        // However, our simple ECS query only takes one component right now (or iterates all).
-        // Let's restart: iterating BoxCollider entities. (Component storage map iteration)
-
-        // Since our query(Component) returns internal entity list which might be all entities if we don't have archetype filtering...
-        // Wait, world.query(Class) iterates `this.entities` (SparseSet keys) and checks `hasComponent`.
-        // A full scan is OK for small N, but bad for large N.
-
-        // Optimization: Let's assume for now we only add colliders to the Player and the Cone, NOT the 5000 walkers.
-        // So the list size will be small (2).
-
         const colliders: { entity: number, transform: Transform, collider: BoxCollider }[] = [];
 
         const entitiesWithCollider = this.world.query(BoxCollider);
@@ -57,41 +40,60 @@ export class PhysicsSystem extends System {
     }
 
     private checkAABB(a: { transform: Transform, collider: BoxCollider }, b: { transform: Transform, collider: BoxCollider }): boolean {
-        // A: left, right, top, bottom
-        const aLeft = a.transform.x + a.collider.offsetX;
-        const aRight = aLeft + a.collider.width;
-        const aTop = a.transform.y + a.collider.offsetY;
-        const aBottom = aTop + a.collider.height;
+        // A: effective size
+        const aScaleX = Math.abs(a.transform._worldScaleX);
+        const aScaleY = Math.abs(a.transform._worldScaleY);
+        const aW = a.collider.width * aScaleX;
+        const aH = a.collider.height * aScaleY;
+        const aOffsetX = a.collider.offsetX * aScaleX;
+        const aOffsetY = a.collider.offsetY * aScaleY;
 
-        // B: left, right, top, bottom
-        const bLeft = b.transform.x + b.collider.offsetX;
-        const bRight = bLeft + b.collider.width;
-        const bTop = b.transform.y + b.collider.offsetY;
-        const bBottom = bTop + b.collider.height;
+        const aLeft = a.transform._worldX + aOffsetX;
+        const aRight = aLeft + aW;
+        const aTop = a.transform._worldY + aOffsetY;
+        const aBottom = aTop + aH;
+
+        // B: effective size
+        const bScaleX = Math.abs(b.transform._worldScaleX);
+        const bScaleY = Math.abs(b.transform._worldScaleY);
+        const bW = b.collider.width * bScaleX;
+        const bH = b.collider.height * bScaleY;
+        const bOffsetX = b.collider.offsetX * bScaleX;
+        const bOffsetY = b.collider.offsetY * bScaleY;
+
+        const bLeft = b.transform._worldX + bOffsetX;
+        const bRight = bLeft + bW;
+        const bTop = b.transform._worldY + bOffsetY;
+        const bBottom = bTop + bH;
 
         return (aLeft < bRight && aRight > bLeft && aTop < bBottom && aBottom > bTop);
     }
 
     private resolveCollision(a: { entity: number, transform: Transform, collider: BoxCollider }, b: { entity: number, transform: Transform, collider: BoxCollider }): void {
-        // Correct overlap by pushing out the non-static object.
-        // If both are dynamic, push both away (half each).
-        // If one is static, push the dynamic one fully.
-
         if (a.collider.isTrigger || b.collider.isTrigger) return;
         if (a.collider.isStatic && b.collider.isStatic) return;
 
-        // Determine overlap amounts
-        const aLeft = a.transform.x + a.collider.offsetX;
-        const aTop = a.transform.y + a.collider.offsetY;
-        const aW = a.collider.width;
-        const aH = a.collider.height;
+        // A Params
+        const aScaleX = Math.abs(a.transform._worldScaleX);
+        const aScaleY = Math.abs(a.transform._worldScaleY);
+        const aW = a.collider.width * aScaleX;
+        const aH = a.collider.height * aScaleY;
+        const aOffsetX = a.collider.offsetX * aScaleX;
+        const aOffsetY = a.collider.offsetY * aScaleY;
+        const aLeft = a.transform._worldX + aOffsetX;
+        const aTop = a.transform._worldY + aOffsetY;
         const aCenterX = aLeft + aW / 2;
         const aCenterY = aTop + aH / 2;
 
-        const bLeft = b.transform.x + b.collider.offsetX;
-        const bTop = b.transform.y + b.collider.offsetY;
-        const bW = b.collider.width;
-        const bH = b.collider.height;
+        // B Params
+        const bScaleX = Math.abs(b.transform._worldScaleX);
+        const bScaleY = Math.abs(b.transform._worldScaleY);
+        const bW = b.collider.width * bScaleX;
+        const bH = b.collider.height * bScaleY;
+        const bOffsetX = b.collider.offsetX * bScaleX;
+        const bOffsetY = b.collider.offsetY * bScaleY;
+        const bLeft = b.transform._worldX + bOffsetX;
+        const bTop = b.transform._worldY + bOffsetY;
         const bCenterX = bLeft + bW / 2;
         const bCenterY = bTop + bH / 2;
 
@@ -102,40 +104,47 @@ export class PhysicsSystem extends System {
         const minDistX = (aW + bW) / 2;
         const minDistY = (aH + bH) / 2;
 
-        if (Math.abs(dx) >= minDistX || Math.abs(dy) >= minDistY) return; // Should allow checkAABB to catch it, but double check.
+        if (Math.abs(dx) >= minDistX || Math.abs(dy) >= minDistY) return;
 
         const overlapX = minDistX - Math.abs(dx);
         const overlapY = minDistY - Math.abs(dy);
 
+        // Helper to apply world delta to local transform
+        const applyWorldDelta = (t: Transform, dx: number, dy: number) => {
+            if (t.parent) {
+                // Assuming simple scale (no rotation for now)
+                t.x += dx / t.parent._worldScaleX;
+                t.y += dy / t.parent._worldScaleY;
+            } else {
+                t.x += dx;
+                t.y += dy;
+            }
+        };
+
         // Resolve along shallowest axis
         if (overlapX < overlapY) {
-            // X collision
             const separation = overlapX;
-            const dir = dx > 0 ? -1 : 1; // Direction to push A away from B. If dx > 0 (B is right), push A left (-1)
+            const dir = dx > 0 ? -1 : 1;
 
             if (a.collider.isStatic) {
-                // Push B
-                b.transform.x += separation * -dir; // Push B opposite to A's push dir
+                applyWorldDelta(b.transform, separation * -dir, 0);
             } else if (b.collider.isStatic) {
-                // Push A
-                a.transform.x += separation * dir;
+                applyWorldDelta(a.transform, separation * dir, 0);
             } else {
-                // Push both
-                a.transform.x += (separation / 2) * dir;
-                b.transform.x += (separation / 2) * -dir;
+                applyWorldDelta(a.transform, (separation / 2) * dir, 0);
+                applyWorldDelta(b.transform, (separation / 2) * -dir, 0);
             }
         } else {
-            // Y collision
             const separation = overlapY;
-            const dir = dy > 0 ? -1 : 1; // Direction to push A away from B
+            const dir = dy > 0 ? -1 : 1;
 
             if (a.collider.isStatic) {
-                b.transform.y += separation * -dir;
+                applyWorldDelta(b.transform, 0, separation * -dir);
             } else if (b.collider.isStatic) {
-                a.transform.y += separation * dir;
+                applyWorldDelta(a.transform, 0, separation * dir);
             } else {
-                a.transform.y += (separation / 2) * dir;
-                b.transform.y += (separation / 2) * -dir;
+                applyWorldDelta(a.transform, 0, (separation / 2) * dir);
+                applyWorldDelta(b.transform, 0, (separation / 2) * -dir);
             }
         }
     }

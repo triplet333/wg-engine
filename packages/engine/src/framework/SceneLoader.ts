@@ -9,13 +9,16 @@ export interface SceneData {
     assets?: {
         images?: Record<string, { path: string }>;
         audio?: Record<string, { path: string; group: 'BGM' | 'SE' | 'VOICE' }>;
+        fonts?: Record<string, { path: string }>;
     };
     entities: EntityData[];
+    ui?: EntityData[];
 }
 
 export interface EntityData {
     id?: string;
     components: ComponentData[];
+    children?: EntityData[];
 }
 
 export interface ComponentData {
@@ -35,11 +38,6 @@ export class SceneLoader {
     public async loadScene(data: SceneData): Promise<Map<string, number>> {
         // 1. Load Assets
         if (data.assets) {
-            // Map string group to enum if necessary, or ensure store accepts string
-            // Assuming AudioStore uses string or compatible type for group
-            // Type assertion might be needed if AudioGroup is strict enum
-
-            // For now, pass directly as implementation plan mostly used loose types or need casting
             await this.resourceManager.loadManifest(data.assets as any);
         }
 
@@ -48,41 +46,58 @@ export class SceneLoader {
         const entityMap = new Map<string, number>();
 
         for (const entityData of data.entities) {
-            const entity = this.world.createEntity();
+            this.createEntityRecursive(entityData, null, registry, entityMap);
+        }
 
-            if (entityData.id) {
-                entityMap.set(entityData.id, entity);
-            }
-
-            // TODO: Handle entity ID if World supports tagged entities or lookups
-            // The current simple ECS might not have ID lookup map exposed.
-            // For now, we just create the entity.
-
-            for (const compData of entityData.components) {
-                const Ctor = registry.get(compData.type);
-                if (Ctor) {
-                    // Instantiate component
-                    // We assume component has a parameterless constructor OR we try to inject props directly?
-                    // Most components in this engine seem to have arguments.
-                    // Ideally, we should create instance and then assign props.
-                    // Or we force components to have default constructor?
-
-                    // Strategy: Instantiate with no args (if possible) or undefined, then assign props.
-                    // TypeScript might complain about missing args if strictly typed.
-                    // We can cast to 'any' to instantiate.
-                    const component = new (Ctor as any)();
-
-                    if (compData.props) {
-                        Object.assign(component, compData.props);
-                    }
-
-                    this.world.addComponent(entity, component);
-                } else {
-                    console.warn(`Component type '${compData.type}' not found in registry.`);
-                }
+        // 3. Create UI Entities (if any)
+        if (data.ui) {
+            for (const entityData of data.ui) {
+                this.createEntityRecursive(entityData, null, registry, entityMap);
+                // Note: UI entities are just entities with specific Components (Camera, Layer, etc.)
+                // They are processed same as normal entities.
             }
         }
 
         return entityMap;
+    }
+
+    private createEntityRecursive(entityData: EntityData, parentTransform: any, registry: any, entityMap: Map<string, number>): void {
+        const entity = this.world.createEntity();
+        if (entityData.id) {
+            entityMap.set(entityData.id, entity);
+        }
+
+        let currentTransform: any = null;
+
+        for (const compData of entityData.components) {
+            const Ctor = registry.get(compData.type);
+            if (Ctor) {
+                const component = new (Ctor as any)();
+                if (compData.props) {
+                    Object.assign(component, compData.props);
+                }
+                this.world.addComponent(entity, component);
+
+                // Identify Transform
+                if (component.constructor.name === 'Transform') {
+                    currentTransform = component;
+                }
+            } else {
+                console.warn(`Component type '${compData.type}' not found in registry.`);
+            }
+        }
+
+        // Link Hierarchy
+        if (parentTransform && currentTransform) {
+            currentTransform.parent = parentTransform;
+            parentTransform.addChild(currentTransform); // Use addChild helper
+        }
+
+        // Process Children
+        if (entityData.children) {
+            for (const childData of entityData.children) {
+                this.createEntityRecursive(childData, currentTransform, registry, entityMap);
+            }
+        }
     }
 }

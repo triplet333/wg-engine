@@ -25,6 +25,8 @@ struct VertexInput {
     @location(3) uvOffset: vec2f,
     @location(4) uvScale: vec2f,
     @location(5) instanceScale: vec2f,
+    @location(6) rotation: f32,
+    @location(7) anchor: vec2f,
 };
 
 @vertex
@@ -32,9 +34,22 @@ fn vs_main(input: VertexInput) -> VertexOutput {
     var output: VertexOutput;
 
     // 1. Model to World
-    // Apply Scale then Translation
-    let scaledPos = input.position * input.instanceScale;
-    let worldPos = scaledPos + input.instancePosition;
+    // Apply Scale (around anchor)
+    // Input Position is [0..1]
+    // Anchor is [0..1] (e.g. 0.5, 0.5)
+    // Result is centered around 0 if anchor is center.
+    let scaledPos = (input.position - input.anchor) * input.instanceScale;
+    
+    // Apply Rotation
+    let c = cos(input.rotation);
+    let s = sin(input.rotation);
+    let rotatedPos = vec2f(
+        scaledPos.x * c - scaledPos.y * s,
+        scaledPos.x * s + scaledPos.y * c
+    );
+
+    // Apply Translation
+    let worldPos = rotatedPos + input.instancePosition;
 
     // 2. World to Camera (View)
     let viewPos = (worldPos - view.cameraPosition) * view.cameraZoom;

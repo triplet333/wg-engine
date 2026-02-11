@@ -7,6 +7,7 @@ export class Sprite extends Component {
     // Backing fields
     private _uvOffset: [number, number] = [0, 0];
     private _uvScale: [number, number] = [1, 1];
+    private _anchor: [number, number] = [0, 0]; // Default Top-Left
 
     constructor(textureId: string) {
         super();
@@ -38,6 +39,18 @@ export class Sprite extends Component {
             this._uvScale = [value.u, value.v];
         } else {
             this._uvScale = [value.x, value.y];
+        }
+    }
+
+    get anchor(): [number, number] {
+        return this._anchor;
+    }
+
+    set anchor(value: [number, number] | { x: number, y: number }) {
+        if (Array.isArray(value)) {
+            this._anchor = value;
+        } else {
+            this._anchor = [value.x, value.y];
         }
     }
 }

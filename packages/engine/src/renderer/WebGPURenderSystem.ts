@@ -23,10 +23,10 @@ export class WebGPURenderSystem extends System {
     private viewBindGroupLayout: GPUBindGroupLayout | null = null;
     private materialBindGroupLayout: GPUBindGroupLayout | null = null;
 
-    // Per Instance: Pos(2) + Color(4) + UVOffset(2) + UVScale(2) + Scale(2) = 12 floats = 48 bytes
-    private instanceStride = 12 * 4;
+    // Per Instance: Pos(2) + Color(4) + UVOffset(2) + UVScale(2) + Scale(2) + Rotation(1) + Anchor(2) + Padding(1) = 16 floats = 64 bytes
+    private instanceStride = 16 * 4;
     private maxInstances = 10000;
-    private instanceData = new Float32Array(this.maxInstances * 12);
+    private instanceData = new Float32Array(this.maxInstances * 16);
 
     private isReady: boolean = false;
     private world!: IWorld;
@@ -42,6 +42,8 @@ export class WebGPURenderSystem extends System {
         this.world = world;
         this.initializeResources();
     }
+
+
 
     private async initializeResources(): Promise<void> {
         if (!this.renderer.device) return;
@@ -172,6 +174,16 @@ export class WebGPURenderSystem extends System {
                                 shaderLocation: 5,
                                 offset: 10 * 4,
                                 format: 'float32x2', // Scale
+                            },
+                            {
+                                shaderLocation: 6,
+                                offset: 12 * 4,
+                                format: 'float32', // Rotation
+                            },
+                            {
+                                shaderLocation: 7,
+                                offset: 13 * 4,
+                                format: 'float32x2', // Anchor
                             }
                         ],
                     }
@@ -530,11 +542,11 @@ export class WebGPURenderSystem extends System {
                 // Fill instance data... (Same logic as before)
                 const transform = this.world.getComponent(item.entity, Transform)!;
                 const renderable = this.world.getComponent(item.entity, Renderable);
-                const offset = instanceCount * 12;
+                const offset = instanceCount * 16; // Stride is 16
 
                 // ... (Fill data) ...
-                this.instanceData[offset] = transform.x;
-                this.instanceData[offset + 1] = transform.y;
+                this.instanceData[offset] = transform._worldX;
+                this.instanceData[offset + 1] = transform._worldY;
 
                 if (renderable) {
                     this.instanceData[offset + 2] = renderable.color[0];
@@ -565,8 +577,12 @@ export class WebGPURenderSystem extends System {
                         texW = tex.width;
                         texH = tex.height;
                     }
-                    this.instanceData[offset + 10] = texW * sprite.uvScale[0] * transform.scale[0];
-                    this.instanceData[offset + 11] = texH * sprite.uvScale[1] * transform.scale[1];
+                    this.instanceData[offset + 10] = texW * sprite.uvScale[0] * transform._worldScaleX;
+                    this.instanceData[offset + 11] = texH * sprite.uvScale[1] * transform._worldScaleY;
+
+                    // Anchor
+                    this.instanceData[offset + 13] = sprite.anchor[0];
+                    this.instanceData[offset + 14] = sprite.anchor[1];
                 } else if (text) {
                     this.instanceData[offset + 6] = 0.0;
                     this.instanceData[offset + 7] = 0.0;
@@ -575,18 +591,34 @@ export class WebGPURenderSystem extends System {
                     if (text.width > 0 && text.height > 0) {
                         this.instanceData[offset + 10] = text.width;
                         this.instanceData[offset + 11] = text.height;
+
+                        this.instanceData[offset + 10] *= transform._worldScaleX;
+                        this.instanceData[offset + 11] *= transform._worldScaleY;
                     } else {
-                        this.instanceData[offset + 10] = 50.0;
-                        this.instanceData[offset + 11] = 50.0;
+                        // Fallback
+                        this.instanceData[offset + 10] = 50.0 * transform._worldScaleX;
+                        this.instanceData[offset + 11] = 50.0 * transform._worldScaleY;
                     }
+                    // Anchor (Text usually Top-Left? Or Center?)
+                    // Default to 0,0 for now.
+                    this.instanceData[offset + 13] = 0.0;
+                    this.instanceData[offset + 14] = 0.0;
+
                 } else {
                     this.instanceData[offset + 6] = 0.0;
                     this.instanceData[offset + 7] = 0.0;
                     this.instanceData[offset + 8] = 1.0;
                     this.instanceData[offset + 9] = 1.0;
-                    this.instanceData[offset + 10] = 50.0 * transform.scale[0];
-                    this.instanceData[offset + 11] = 50.0 * transform.scale[1];
+                    this.instanceData[offset + 10] = 50.0 * transform._worldScaleX;
+                    this.instanceData[offset + 11] = 50.0 * transform._worldScaleY;
+                    // Anchor
+                    this.instanceData[offset + 13] = 0.0;
+                    this.instanceData[offset + 14] = 0.0;
                 }
+
+                // Rotation
+                this.instanceData[offset + 12] = transform._worldRotation;
+                // Padding at 15 is unused/0
 
                 instanceCount++;
                 currentBatch!.count++;
@@ -599,7 +631,7 @@ export class WebGPURenderSystem extends System {
                 0,
                 this.instanceData,
                 0,
-                instanceCount * 12
+                instanceCount * 16
             );
 
             // Execute Batches

@@ -11,6 +11,22 @@ export class Transform extends Component {
         this.y = y;
     }
 
+    // Local Transform
+    public rotation: number = 0; // Radians
+
+    // Hierarchy
+    public parent: Transform | null = null;
+    public children: Transform[] = [];
+
+    // World Transform Cache (Calculated by TransformSystem)
+    public _worldX: number = 0;
+    public _worldY: number = 0;
+    public _worldRotation: number = 0;
+    public _worldScaleX: number = 1;
+    public _worldScaleY: number = 1;
+
+    // Cache dirty flag? TransformSystem reconstructs every frame so maybe not needed yet.
+
     get scale(): [number, number] {
         return this._scale;
     }
@@ -22,6 +38,19 @@ export class Transform extends Component {
             this._scale = value;
         } else {
             this._scale = [value.x, value.y];
+        }
+    }
+
+    public addChild(child: Transform): void {
+        child.parent = this;
+        this.children.push(child);
+    }
+
+    public removeChild(child: Transform): void {
+        const index = this.children.indexOf(child);
+        if (index !== -1) {
+            this.children.splice(index, 1);
+            child.parent = null;
         }
     }
 }
