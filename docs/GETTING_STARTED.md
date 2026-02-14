@@ -57,7 +57,7 @@ main();
 
 ## シーンの作成
 
-`Scene` クラスを継承して、独自のシーンを作成します。
+`Scene` クラスを継承して、独自のシーンを作成します。エンジンは **JSON ベースの `SceneLoader`** もサポートしていますが、ここでは基本的なコードによる定義方法を解説します。
 
 ```typescript
 import { Scene, World, Entity } from '@my-engine/core';
@@ -66,15 +66,16 @@ import { Sprite } from '@my-engine/core/webgpu/components/Sprite';
 
 export class MyFirstScene extends Scene {
     public override async onEnter(world: World): Promise<void> {
-        // 画像のロード
+        // 画像のロード（マニフェストの使用を推奨）
         await this.resourceManager.loadTexture('player', '/assets/player.png');
 
         // エンティティの作成
         const player = world.createEntity();
         
         // コンポーネントの追加
-        world.addComponent(player, new Transform(400, 300)); // 位置 (x, y)
-        world.addComponent(player, new Sprite('player'));    // スプライト
+        // Transform(x, y, z) - z は描画順序 (大きいほど手前)
+        world.addComponent(player, new Transform(400, 300, 10)); 
+        world.addComponent(player, new Sprite('player'));
     }
 
     public override onExit(world: World): void {

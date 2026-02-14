@@ -10,18 +10,23 @@
 
 ## 🛠️ アーキテクチャ
 - **ECS**: Entity, Component, System を厳密に分離しています。
-- **レンダラー**: `WebGPURenderSystem` が `WebGPURenderer` を使用してバッチレンダリングを行います。
-- **リソース管理**: `ResourceManager` でテクスチャと音声を一元管理します。
+  - **Entity**: `active` 状態を持ちます。`World.setActive` で制御し、無効なエンティティはクエリから除外されます。
+  - **Transform**: 親子関係 (`parent`, `children`) と `z` 座標による表示順序制御をサポートします。
+- **レンダラー**: `WebGPURenderSystem` が **Dynamic Batching** を使用して描画します。CPU側で頂点を生成し、テクスチャ切り替えを最小化して一括描画します。
+- **リソース管理**: `ResourceManager` でテクスチャ、音声、フォントを一元管理します。
+- **データ駆動**: `SceneLoader` により、JSON データからシーン（アセット、エンティティ）を構築可能です。
 
 ## 📌 重要な開発パターン
 ### 1.設計思想
 - ツリーシェイキングを効かせ、必要な機能だけをロードする設計を目指しています。
 - まとまったプロパティは内部では配列で管理し、setterで配列や個別プロパティで設定できるようにします。
+- **Componentはデータのみ**: ロジックはSystemに記述します。
 
 ### 2. リソース管理 (マニフェストパターン)
 アセット管理には **Type-Safe Key (型安全なキー)** パターンを使用します。
 - `GameScene` でキー定義 (`IMAGE_KEYS`, `AUDIO_KEYS`) とマニフェスト定義を行います。
 - `resourceManager.loadTextureManifest` / `loadAudioManifest` でロードします。
+- **フォント**: `resourceManager.fonts.load(family, url)` を使用して `.ttf` や `.otf` をロードします。ロードされたフォントは `Text` コンポーネントの `fontFamily` で指定可能です。
 - ゲームロジック内で **マジックストリングや生のファイルパスを使用しないことを推奨** します。
 
 ### 3. ビルド環境 & 開発環境
@@ -34,7 +39,8 @@
 ## 📂 ディレクトリ構造
 - `apps/private-game/public/assets/`: 実行時に必要なアセット（画像/音声）はここに配置します。
 - `packages/engine/src/shaders/`: WGSL シェーダーファイルはここにあります。
+- `packages/engine/src/framework/`: `SceneLoader` などの高レベル機能が含まれます。
 
 ## ⚠️ よくある落とし穴
 - **404 エラー**: アセットのパスに注意してください。`public` ディレクトリからの相対パス (`/assets/pen1.png` など) である必要があります。
-- **テクスチャロード**: 画像が表示されない場合、`WebGPURenderSystem` が共有 `ResourceManager` を正しく参照しているか確認してください。
+- **テクスチャ表示**: 画像が表示されない場合、`z` インデックス (Transform) が正しいか、または `Renderable/Sprite` コンポーネントが正しくアタッチされているか確認してください。

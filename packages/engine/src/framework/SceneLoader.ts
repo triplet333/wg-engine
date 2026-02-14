@@ -1,6 +1,7 @@
 import { IWorld } from '../ecs/types';
 import { ResourceManager } from '../core/ResourceManager';
 import { ComponentRegistry } from './ComponentRegistry';
+import { InputManager, InputBinding } from '../core/InputManager';
 
 
 // JSON Schema Types
@@ -15,6 +16,7 @@ export interface SceneData {
     };
     entities: EntityData[];
     ui?: EntityData[];
+    input?: Record<string, InputBinding>;
 }
 
 export interface EntityData {
@@ -31,13 +33,22 @@ export interface ComponentData {
 export class SceneLoader {
     private world: IWorld;
     private resourceManager: ResourceManager;
+    private inputManager?: InputManager;
 
-    constructor(world: IWorld, resourceManager: ResourceManager) {
+    constructor(world: IWorld, resourceManager: ResourceManager, inputManager?: InputManager) {
         this.world = world;
         this.resourceManager = resourceManager;
+        this.inputManager = inputManager;
     }
 
     public async loadScene(data: SceneData): Promise<Map<string, number>> {
+        // 0. Setup Input
+        if (data.input && this.inputManager) {
+            for (const [action, binding] of Object.entries(data.input)) {
+                this.inputManager.bindAction(action, binding);
+            }
+        }
+
         // 1. Load Assets
         if (data.assets) {
             await this.resourceManager.loadManifest(data.assets as any);

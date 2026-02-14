@@ -122,7 +122,7 @@ Thumbs.db
 # Vite
 dist-ssr
 *.local
-apps/private-game
+apps/
 
 # Editor
 .vscode/
