@@ -1,77 +1,52 @@
+struct VertexInput {
+    @location(0) position: vec2f,
+    @location(1) uv: vec2f,
+    @location(2) color: vec4f,
+};
+
 struct VertexOutput {
     @builtin(position) position: vec4f,
     @location(0) color: vec4f,
     @location(1) uv: vec2f,
 };
 
-
-
 struct ViewUniforms {
     viewport: vec2f,
     cameraPosition: vec2f,
     cameraZoom: f32,
-    _padding: f32, // explicit padding to align to 16 bytes
+    _padding: f32,
 };
 
 @group(0) @binding(0) var<uniform> view: ViewUniforms;
-
-@group(1) @binding(1) var mySampler: sampler;
-@group(1) @binding(2) var myTexture: texture_2d<f32>;
-
-struct VertexInput {
-    @location(0) position: vec2f,
-    @location(1) instancePosition: vec2f,
-    @location(2) color: vec4f,
-    @location(3) uvOffset: vec2f,
-    @location(4) uvScale: vec2f,
-    @location(5) instanceScale: vec2f,
-    @location(6) rotation: f32,
-    @location(7) anchor: vec2f,
-};
 
 @vertex
 fn vs_main(input: VertexInput) -> VertexOutput {
     var output: VertexOutput;
 
-    // 1. Model to World
-    // Apply Scale (around anchor)
-    // Input Position is [0..1]
-    // Anchor is [0..1] (e.g. 0.5, 0.5)
-    // Result is centered around 0 if anchor is center.
-    let scaledPos = (input.position - input.anchor) * input.instanceScale;
+    // input.position is already in World Space (computed on CPU)
     
-    // Apply Rotation
-    let c = cos(input.rotation);
-    let s = sin(input.rotation);
-    let rotatedPos = vec2f(
-        scaledPos.x * c - scaledPos.y * s,
-        scaledPos.x * s + scaledPos.y * c
-    );
+    // World to View
+    let viewPos = (input.position - view.cameraPosition) * view.cameraZoom;
 
-    // Apply Translation
-    let worldPos = rotatedPos + input.instancePosition;
-
-    // 2. World to Camera (View)
-    let viewPos = (worldPos - view.cameraPosition) * view.cameraZoom;
-
-    // 3. View to Clip Space (Projection)
+    // View to Clip
+    // Screen Center is (0,0) in Clip Space
     let clipX = (viewPos.x / view.viewport.x) * 2.0 - 1.0;
-    let clipY = -((viewPos.y / view.viewport.y) * 2.0 - 1.0); // WebGPU: Y is up, Screen: Y is down
+    // Y is Up in WebGPU (-1 bottom, 1 top). Screen Y is Down.
+    // So we flip Y.
+    let clipY = -((viewPos.y / view.viewport.y) * 2.0 - 1.0);
 
     output.position = vec4f(clipX, clipY, 0.0, 1.0);
     output.color = input.color;
-    
-    // UV Calculation: (Base [0..1] * Scale) + Offset
-    // Input position is now 0..1 (Unit Quad)
-    let baseUV = input.position;
-    output.uv = (baseUV * input.uvScale) + input.uvOffset;
+    output.uv = input.uv;
 
     return output;
 }
 
+@group(1) @binding(1) var mySampler: sampler;
+@group(1) @binding(2) var myTexture: texture_2d<f32>;
+
 @fragment
-fn fs_main(@location(0) color: vec4f, @location(1) uv: vec2f) -> @location(0) vec4f {
-    let texColor = textureSample(myTexture, mySampler, uv);
-    // Multiply with instance color (tint)
-    return texColor * color;
+fn fs_main(input: VertexOutput) -> @location(0) vec4f {
+    let texColor = textureSample(myTexture, mySampler, input.uv);
+    return texColor * input.color;
 }

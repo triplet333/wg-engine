@@ -56,11 +56,13 @@ export class TransformSystem extends System {
             // Translate
             transform._worldX = parent._worldX + rotatedX;
             transform._worldY = parent._worldY + rotatedY;
+            transform._worldZ = parent._worldZ + transform.z;
 
         } else {
             // Root
             transform._worldX = transform.x;
             transform._worldY = transform.y;
+            transform._worldZ = transform.z;
             transform._worldRotation = transform.rotation;
             transform._worldScaleX = transform.scale[0];
             transform._worldScaleY = transform.scale[1];

@@ -14,7 +14,7 @@ export class BoxCollider extends Component {
      * @param isStatic If true, this object will not be pushed by physics (e.g. walls).
      * @param isTrigger If true, this object detects collisions but passes through (e.g. powerups).
      */
-    constructor(width: number, height: number, isStatic: boolean = false, isTrigger: boolean = false) {
+    constructor(width: number = 0, height: number = 0, isStatic: boolean = false, isTrigger: boolean = false) {
         super();
         this.width = width;
         this.height = height;

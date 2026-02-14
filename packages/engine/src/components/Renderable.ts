@@ -3,7 +3,9 @@ import { Component } from '../ecs/Component';
 export class Renderable extends Component {
     private _color: [number, number, number, number]; // RGBA
 
-    constructor(r: number, g: number, b: number, a: number = 1.0) {
+    public visible: boolean = true;
+
+    constructor(r: number = 1, g: number = 1, b: number = 1, a: number = 1.0) {
         super();
         this._color = [r, g, b, a];
     }

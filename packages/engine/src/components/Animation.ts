@@ -16,6 +16,13 @@ export class Animation extends Component {
         this.clips.set(clip.name, clip);
     }
 
+    // JSON Helper
+    public set clipsData(data: Record<string, AnimationClip>) {
+        for (const key in data) {
+            this.addClip(data[key]);
+        }
+    }
+
     public play(name: string): void {
         const clip = this.clips.get(name);
         if (clip) {

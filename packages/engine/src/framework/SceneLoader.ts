@@ -10,6 +10,8 @@ export interface SceneData {
         images?: Record<string, { path: string }>;
         audio?: Record<string, { path: string; group: 'BGM' | 'SE' | 'VOICE' }>;
         fonts?: Record<string, { path: string }>;
+        bitmapFonts?: Record<string, { fnt: string, texture: string }>;
+        openTypeFonts?: Record<string, { path: string }>;
     };
     entities: EntityData[];
     ui?: EntityData[];

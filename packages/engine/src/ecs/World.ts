@@ -10,6 +10,8 @@ export class World implements IWorld {
     // Storage: Map<ComponentConstructor, Map<Entity, ComponentInstance>>
     private components = new Map<ComponentConstructor, Map<Entity, Component>>();
 
+    private disabledEntities = new Set<Entity>();
+
     /**
      * Creates a new entity in the world.
      * @returns The newly created Entity.
@@ -24,6 +26,7 @@ export class World implements IWorld {
      */
     public destroyEntity(entity: Entity): void {
         this.entityManager.destroy(entity);
+        this.disabledEntities.delete(entity);
         // Remove all components for this entity
         for (const [_, entityMap] of this.components) {
             entityMap.delete(entity);
@@ -36,6 +39,7 @@ export class World implements IWorld {
     public clear(): void {
         this.entityManager.clear();
         this.components.clear();
+        this.disabledEntities.clear();
         this.systems = []; // Clear systems to allow Scenes to define their own pipelines
     }
 
@@ -99,6 +103,29 @@ export class World implements IWorld {
     }
 
     /**
+     * Sets the active state of an entity.
+     * Inactive entities are excluded from World.query() by default.
+     * @param entity - The entity to update.
+     * @param active - True to enable, false to disable.
+     */
+    public setActive(entity: Entity, active: boolean): void {
+        if (active) {
+            this.disabledEntities.delete(entity);
+        } else {
+            this.disabledEntities.add(entity);
+        }
+    }
+
+    /**
+     * Checks if an entity is active.
+     * @param entity - The entity to check.
+     * @returns True if active, false if disabled.
+     */
+    public isActive(entity: Entity): boolean {
+        return !this.disabledEntities.has(entity);
+    }
+
+    /**
      * Simple query to get all entities that have a specific component type.
      * For multiple components, we can intersect sets (naive implementation).
      * @param componentType - The component constructor to filter by.
@@ -107,6 +134,19 @@ export class World implements IWorld {
     public query(componentType: ComponentConstructor): Entity[] {
         const entityMap = this.components.get(componentType);
         if (!entityMap) return [];
-        return Array.from(entityMap.keys());
+
+        // Filter out disabled entities
+        // Optimization: If no entities are disabled, return keys directly (avoids filter overhead)
+        if (this.disabledEntities.size === 0) {
+            return Array.from(entityMap.keys());
+        }
+
+        const entities: Entity[] = [];
+        for (const entity of entityMap.keys()) {
+            if (!this.disabledEntities.has(entity)) {
+                entities.push(entity);
+            }
+        }
+        return entities;
     }
 }

@@ -3,12 +3,14 @@ import { Component } from '../ecs/Component';
 export class Transform extends Component {
     public x: number = 0;
     public y: number = 0;
+    public z: number = 0; // Depth
     private _scale: [number, number] = [1, 1];
 
-    constructor(x: number = 0, y: number = 0) {
+    constructor(x: number = 0, y: number = 0, z: number = 0) {
         super();
         this.x = x;
         this.y = y;
+        this.z = z;
     }
 
     // Local Transform
@@ -21,6 +23,7 @@ export class Transform extends Component {
     // World Transform Cache (Calculated by TransformSystem)
     public _worldX: number = 0;
     public _worldY: number = 0;
+    public _worldZ: number = 0;
     public _worldRotation: number = 0;
     public _worldScaleX: number = 1;
     public _worldScaleY: number = 1;

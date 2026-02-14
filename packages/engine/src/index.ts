@@ -12,8 +12,17 @@ export * from './core/ResourceManager';
 // export * from './core/ComponentRegistry';
 // Other components like Sprite/Renderable moved to specific exports or separate
 export * from './systems/TransformSystem';
-export * from './systems/PhysicsSystem'; // Also good practice
-export * from './renderer/WebGPURenderSystem'; // Already imported via subpath? check FrameworkGameScene imports.
+export * from './systems/PhysicsSystem';
+export * from './systems/ScriptSystem';
+export * from './components/RigidBody';
+export * from './components/Script';
+export * from './renderer/WebGPURenderSystem';
+export * from './components/Animation';
+export * from './components/SpriteSheet';
+export * from './systems/AnimationSystem';
+export * from './systems/PhysicsDebugSystem';
+export * from './components/Renderable';
+export * from './core/AnimationTypes';
 
 export class Game {
     public world: World;
