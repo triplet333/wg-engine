@@ -12,18 +12,22 @@ export class InputManager {
     private bindings: Map<string, InputBinding> = new Map();
     private touches: Set<number> = new Set(); // Track active touch IDs
 
-    constructor() {
-        if (typeof window !== 'undefined') {
-            window.addEventListener('keydown', (e) => this.onKeyDown(e));
-            window.addEventListener('keyup', (e) => this.onKeyUp(e));
-            window.addEventListener('mousedown', (e) => this.onMouseDown(e));
-            window.addEventListener('mouseup', (e) => this.onMouseUp(e));
-            window.addEventListener('mousemove', (e) => this.onMouseMove(e));
+    constructor(target?: EventTarget) {
+        const element = target || (typeof window !== 'undefined' ? window : null);
+
+        if (element) {
+            // TypeScript cast mainly for Window vs HTMLElement differences with events
+            // EventTarget has addEventListener so it's fine.
+            element.addEventListener('keydown', (e) => this.onKeyDown(e as KeyboardEvent));
+            element.addEventListener('keyup', (e) => this.onKeyUp(e as KeyboardEvent));
+            element.addEventListener('mousedown', (e) => this.onMouseDown(e as MouseEvent));
+            element.addEventListener('mouseup', (e) => this.onMouseUp(e as MouseEvent));
+            element.addEventListener('mousemove', (e) => this.onMouseMove(e as MouseEvent));
 
             // Touch Events
-            window.addEventListener('touchstart', (e) => this.onTouchStart(e), { passive: false });
-            window.addEventListener('touchend', (e) => this.onTouchEnd(e));
-            window.addEventListener('touchcancel', (e) => this.onTouchEnd(e));
+            element.addEventListener('touchstart', (e) => this.onTouchStart(e as TouchEvent), { passive: false });
+            element.addEventListener('touchend', (e) => this.onTouchEnd(e as TouchEvent));
+            element.addEventListener('touchcancel', (e) => this.onTouchEnd(e as TouchEvent));
             // window.addEventListener('touchmove', ...); // Not needed for simple tap yet
         }
     }

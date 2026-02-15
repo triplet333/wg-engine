@@ -41,17 +41,53 @@ export class SceneLoader {
         this.inputManager = inputManager;
     }
 
-    public async loadScene(data: SceneData): Promise<Map<string, number>> {
+    public async loadScene(data: SceneData, basePathOrResolver: string | ((path: string) => string) = ''): Promise<Map<string, number>> {
+        // Resolve Helper
+        const resolve = (p: string): string => {
+            if (typeof basePathOrResolver === 'function') {
+                return basePathOrResolver(p);
+            }
+
+            const base = basePathOrResolver;
+            if (!base) return p;
+            if (p.startsWith('http') || p.startsWith('/')) return p; // Absolute paths ignored if using basePath string
+            const cleanBase = base.endsWith('/') ? base : base + '/';
+            const cleanPath = p.startsWith('./') ? p.substring(2) : p;
+            return cleanBase + cleanPath;
+        };
+
         // 0. Setup Input
         if (data.input && this.inputManager) {
             for (const [action, binding] of Object.entries(data.input)) {
+                // Input binding might need adjustment? Usually not.
                 this.inputManager.bindAction(action, binding);
             }
         }
 
-        // 1. Load Assets
+        // 1. Load Assets with resolution
         if (data.assets) {
-            await this.resourceManager.loadManifest(data.assets as any);
+            const assets = JSON.parse(JSON.stringify(data.assets)); // Deep copy to avoid mutating original JSON
+
+            if (assets.images) {
+                for (const key in assets.images) assets.images[key].path = resolve(assets.images[key].path);
+            }
+            if (assets.audio) {
+                for (const key in assets.audio) assets.audio[key].path = resolve(assets.audio[key].path);
+            }
+            if (assets.fonts) {
+                for (const key in assets.fonts) assets.fonts[key].path = resolve(assets.fonts[key].path);
+            }
+            if (assets.bitmapFonts) {
+                for (const key in assets.bitmapFonts) {
+                    assets.bitmapFonts[key].fnt = resolve(assets.bitmapFonts[key].fnt);
+                    assets.bitmapFonts[key].texture = resolve(assets.bitmapFonts[key].texture);
+                }
+            }
+            if (assets.openTypeFonts) {
+                for (const key in assets.openTypeFonts) assets.openTypeFonts[key].path = resolve(assets.openTypeFonts[key].path);
+            }
+
+            await this.resourceManager.loadManifest(assets as any);
         }
 
         // 2. Create Entities
